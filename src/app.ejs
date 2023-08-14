@@ -1,0 +1,11 @@
+<!-- HEAD -->
+<%= htmlWebpackPlugin.files.css.map((href)=> `<link rel="stylesheet" href="${href}">`) %>
+<!-- HEAD END -->
+
+<!-- BODY -->
+<div id="app_container"></div>
+<!-- BODY END -->
+
+<!-- FOOTER -->
+<%= htmlWebpackPlugin.files.js.map((src)=> `<script src="${src}"></script>`) %>
+<!-- FOOTER END -->

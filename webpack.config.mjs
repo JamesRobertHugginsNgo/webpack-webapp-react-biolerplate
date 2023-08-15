@@ -5,134 +5,117 @@ import autoprefixer from 'autoprefixer';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import Webpack from 'webpack';
 
+const CFRAME_PATH = './cframes/cframe-1';
+const APP_PATH = 'webapps/app_name'; // 'resources/app_name';
+const HTML_FILENAME = 'index.html'; // 'html/app.html';
+
 export default function (env, argv) {
-	console.log(env, argv);
+	const {} = env;
+	const { mode = 'development' } = argv;
 
-	const {
-		cframe = './src/cframe-1',
-		mode = 'development'
-	} = argv;
+	return import(Path.resolve(Path.join(CFRAME_PATH, 'webpack-helper.mjs'))).then(({ default: makeTemplate }) => {
+		let headMatch, bodyMatch, footerMatch;
+		return Fs.readFile('./src/app.ejs', { encoding: 'utf-8' }).then((content) => {
+			headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
+			const head = headMatch ? headMatch[1] : '';
 
-	return Fs.readFile('./src/app.ejs', { encoding: 'utf-8' }).then((content) => {
-		const headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
-		const bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
-		const footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
+			bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
+			const body = bodyMatch ? bodyMatch[1] : '';
 
-		const cframePath = Path.join(cframe, 'cframe.ejs');
-		return Fs.readFile(cframePath, { encoding: 'utf-8' }).then((content) => {
-			content = content
-				.replace('<!-- HEAD -->', headMatch ? headMatch[1] : '')
-				.replace('<!-- BODY -->', bodyMatch ? bodyMatch[1] : '')
-				.replace('<!-- FOOTER -->', footerMatch ? footerMatch[1] : '')
+			footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
+			const footer = footerMatch ? footerMatch[1] : '';
 
-			return Fs.mkdir('./tmp/assets', { recursive: true }).then(() => {
-				return Promise.all([
-					Fs.readdir(Path.join(cframe, 'assets')).then((files) => {
-						const promises = [];
-						const length = files.length;
-						for (let index = 0; index < length; index++) {
-							const file = files[index];
-							const srcFilePath = Path.join(cframe, 'assets', file);
-							promises.push(Fs.lstat(srcFilePath).then((lstat) => {
-								if (lstat.isDirectory()) return;
-								const destFilePath = Path.join('./tmp/assets', file);
-								return Fs.copyFile(srcFilePath, destFilePath);
-							}));
-						}
-						return Promise.all(promises);
-					}, (error) => {
-						console.error(error);
-					}),
-					Fs.writeFile('./tmp/page.ejs', content, { encoding: 'utf-8' })
-				]);
-			});
-		});
-	}).then(() => {
-		return {
-			entry: './src/main.tsx',
-			output: {
-				path: Path.resolve('./dist'),
-				filename: 'main.[hash].js',
-				publicPath: '/dist'
-			},
-			module: {
-				rules: [
-					{
-						test: /\.css$/i,
-						use: [
-							'style-loader',
-							'css-loader'
-						],
-					},
-					{
-						test: /\.jsx?$/,
-						use: 'babel-loader',
-						exclude: /node_modules/
-					},
-					{
-						test: /\.png$/i,
-						type: 'asset/resource'
-					},
-					{
-						test: /\.s[ac]ss$/i,
-						use: [
-							'style-loader',
-							'css-loader',
-							{
-								loader: 'postcss-loader',
-								options: {
-									postcssOptions: {
-										plugins: [
-											autoprefixer
-										]
-									}
-								}
-							},
-							'sass-loader',
-						],
-					},
-					{
-						test: /\.svg$/i,
-						type: 'asset/source'
-					},
-					{
-						test: /\.tsx?$/i,
-						use: [
-							'babel-loader',
-							'ts-loader'
-						],
-						exclude: /node_modules/,
-					}
-				]
-			},
-			plugins: [
-				new HtmlWebpackPlugin({
-					title: 'Webpack Experiments',
-					filename: 'index.html',
-					template: './tmp/page.ejs',
-					inject: false
-				}),
-				new Webpack.ProvidePlugin({
-					$: 'jquery',
-					jQuery: 'jquery'
-				})
-			],
-			mode,
-			resolve: {
-				alias: {
-					cframe: Path.resolve('./src/cframe-1')
+			return makeTemplate(head, body, footer, Path.resolve('./tmp'));
+		}).then(({
+			aliasPath: cframeAliasPath,
+			templatePath: cframeTemplatePath,
+			providePlugin: cframeProvidePlugin = {}
+		}) => {
+			return {
+				entry: './src/main.tsx',
+				output: {
+					path: Path.resolve(Path.join('./dist', APP_PATH)),
+					filename: 'main.[hash].js',
+					publicPath: Path.join('/dist', APP_PATH)
 				},
-				extensions: [
-					'.ts',
-					'.tsx',
-					'.js',
-					'.jsx'
+				module: {
+					rules: [
+						{
+							test: /\.css$/i,
+							use: [
+								'style-loader',
+								'css-loader'
+							],
+						},
+						{
+							test: /\.jsx?$/,
+							use: 'babel-loader',
+							exclude: /node_modules/
+						},
+						{
+							test: /\.png$/i,
+							type: 'asset/resource'
+						},
+						{
+							test: /\.s[ac]ss$/i,
+							use: [
+								'style-loader',
+								'css-loader',
+								{
+									loader: 'postcss-loader',
+									options: {
+										postcssOptions: {
+											plugins: [
+												autoprefixer
+											]
+										}
+									}
+								},
+								'sass-loader',
+							],
+						},
+						{
+							test: /\.svg$/i,
+							type: 'asset/source'
+						},
+						{
+							test: /\.tsx?$/i,
+							use: [
+								'babel-loader',
+								'ts-loader'
+							],
+							exclude: /node_modules/,
+						}
+					]
+				},
+				plugins: [
+					new HtmlWebpackPlugin({
+						title: 'Webpack Experiments',
+						filename: HTML_FILENAME,
+						template: cframeTemplatePath,
+						inject: false
+					}),
+					new Webpack.ProvidePlugin({
+						...cframeProvidePlugin
+					})
+				],
+				mode,
+				resolve: {
+					alias: {
+						cframe: cframeAliasPath
+					},
+					extensions: [
+						'.ts',
+						'.tsx',
+						'.js',
+						'.jsx'
+					]
+				},
+				target: [
+					'web',
+					'es5'
 				]
-			},
-			target: [
-				'web',
-				'es5'
-			]
-		};
+			};
+		});
 	});
 }

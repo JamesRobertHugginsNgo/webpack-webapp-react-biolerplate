@@ -1,4 +1,4 @@
-import 'cframe/cframe';
+import 'cframe';
 
 import './main.scss';
 

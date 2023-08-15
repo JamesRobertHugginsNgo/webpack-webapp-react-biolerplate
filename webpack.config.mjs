@@ -10,8 +10,10 @@ const APP_PATH = 'webapps/app_name'; // 'resources/app_name';
 const HTML_FILENAME = 'index.html'; // 'html/app.html';
 
 export default function (env, argv) {
-	const {} = env;
+	const { local = 'yes' } = env;
 	const { mode = 'development' } = argv;
+
+	const isLocal = local === 'yes';
 
 	return import(Path.resolve(Path.join(CFRAME_PATH, 'webpack-helper.mjs'))).then(({ default: makeTemplate }) => {
 		let headMatch, bodyMatch, footerMatch;
@@ -36,7 +38,7 @@ export default function (env, argv) {
 				output: {
 					path: Path.resolve(Path.join('./dist', APP_PATH)),
 					filename: 'main.[hash].js',
-					publicPath: Path.join('/dist', APP_PATH)
+					publicPath: Path.join(isLocal ? '/dist' : '/', APP_PATH)
 				},
 				module: {
 					rules: [

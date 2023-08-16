@@ -9,22 +9,29 @@ const CFRAME_PATH = './cframes/cframe-1';
 const APP_PATH = 'webapps/app_name'; // 'resources/app_name';
 const HTML_FILENAME = 'index.html'; // 'html/app.html';
 
-export default function (env, argv) {
-	const { local = 'yes' } = env;
-	const { mode = 'development' } = argv;
+export default function (envArg, argv) {
+	console.log(envArg, argv);
 
-	const isLocal = local === 'yes';
+	const {
+		WEBPACK_SERVE,
+		NOT_LOCAL = WEBPACK_SERVE,
+		env = 'dev' // 'dev', 'qa', 'prod'
+	} = envArg;
+	const {
+		mode = envArg === 'dev' ? 'development' : 'production'
+	} = argv;
+
+	const isLocal = !NOT_LOCAL;
 
 	return import(Path.resolve(Path.join(CFRAME_PATH, 'webpack-helper.mjs'))).then(({ default: makeTemplate }) => {
-		let headMatch, bodyMatch, footerMatch;
 		return Fs.readFile('./src/app.ejs', { encoding: 'utf-8' }).then((content) => {
-			headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
+			const headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
 			const head = headMatch ? headMatch[1] : '';
 
-			bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
+			const bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
 			const body = bodyMatch ? bodyMatch[1] : '';
 
-			footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
+			const footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
 			const footer = footerMatch ? footerMatch[1] : '';
 
 			return makeTemplate(head, body, footer, Path.resolve('./tmp'));
@@ -39,6 +46,7 @@ export default function (env, argv) {
 					path: Path.resolve(Path.join('./dist', APP_PATH)),
 					filename: 'main.[hash].js',
 					publicPath: Path.join(isLocal ? '/dist' : '/', APP_PATH)
+					// publicPath: Path.join('/', APP_PATH)
 				},
 				module: {
 					rules: [
@@ -116,7 +124,10 @@ export default function (env, argv) {
 				target: [
 					'web',
 					'es5'
-				]
+				],
+				devServer: {
+					port: 9000
+				}
 			};
 		});
 	});

@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --config webpack.config.mjs --mode development --env deploy-target=123",
-    "build:prod": "webpack --config webpack.config.mjs --mode production"
+    "build": "webpack --config webpack.config.mjs --mode development --env local=yes env=dev test",
+    "build:prod": "webpack --config webpack.config.mjs --mode production --env local=yes env=prod",
+    "serve": "webpack serve --config webpack.config.mjs --mode development"
   },
   "keywords": [],
   "author": "",
@@ -31,7 +32,8 @@
     "ts-loader": "^9.4.4",
     "typescript": "^5.1.6",
     "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",

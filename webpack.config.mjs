@@ -5,130 +5,134 @@ import autoprefixer from 'autoprefixer';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import Webpack from 'webpack';
 
-const CFRAME_PATH = './cframes/cframe-1';
-const APP_PATH = 'webapps/app_name'; // 'resources/app_name';
-const HTML_FILENAME = 'index.html'; // 'html/app.html';
-
 export default function (envArg, argv) {
-	console.log(envArg, argv);
-
 	const {
 		WEBPACK_SERVE,
-		NOT_LOCAL = WEBPACK_SERVE,
-		env = 'dev' // 'dev', 'qa', 'prod'
+		cframePath = './cframes/cframe-1', // TODO: Customize
+		env = 'dev', // 'dev', 'qa', 'prod'
+		html_file_name: htmlFileName = 'index.html', // TODO: Customize
+		html_title: htmlTitle = 'Webpack Experiments', // TODO: Customize
+		public_path: publicPath, // TODO: Customize
+		served = WEBPACK_SERVE || false
 	} = envArg;
 	const {
-		mode = envArg === 'dev' ? 'development' : 'production'
+		mode = env === 'dev' ? 'development' : 'production', // 'development', 'production'
 	} = argv;
 
-	const isLocal = !NOT_LOCAL;
+	const isProd = mode === 'production';
 
-	return import(Path.resolve(Path.join(CFRAME_PATH, 'webpack-helper.mjs'))).then(({ default: makeTemplate }) => {
-		return Fs.readFile('./src/app.ejs', { encoding: 'utf-8' }).then((content) => {
-			const headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
-			const head = headMatch ? headMatch[1] : '';
+	return Fs.readFile('./src/app.ejs', { encoding: 'utf-8' }).then((content) => {
+		const headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
+		const head = headMatch ? headMatch[1] : '';
+		const bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
+		const body = bodyMatch ? bodyMatch[1] : '';
+		const footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
+		const footer = footerMatch ? footerMatch[1] : '';
 
-			const bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
-			const body = bodyMatch ? bodyMatch[1] : '';
-
-			const footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
-			const footer = footerMatch ? footerMatch[1] : '';
-
-			return makeTemplate(head, body, footer, Path.resolve('./tmp'));
-		}).then(({
-			aliasPath: cframeAliasPath,
-			templatePath: cframeTemplatePath,
-			providePlugin: cframeProvidePlugin = {}
+		return import(Path.resolve(Path.join(cframePath, 'webpack-helper.mjs'))).then(({
+			alias: cframeAlias,
+			prepareTemplate: prepareCframeTemplate,
+			providePlugins: cframeProvidePlugins
 		}) => {
-			return {
-				entry: './src/main.tsx',
-				output: {
-					path: Path.resolve(Path.join('./dist', APP_PATH)),
-					filename: 'main.[hash].js',
-					publicPath: Path.join(isLocal ? '/dist' : '/', APP_PATH)
-					// publicPath: Path.join('/', APP_PATH)
-				},
-				module: {
-					rules: [
-						{
-							test: /\.css$/i,
-							use: [
-								'style-loader',
-								'css-loader'
-							],
-						},
-						{
-							test: /\.jsx?$/,
-							use: 'babel-loader',
-							exclude: /node_modules/
-						},
-						{
-							test: /\.png$/i,
-							type: 'asset/resource'
-						},
-						{
-							test: /\.s[ac]ss$/i,
-							use: [
-								'style-loader',
-								'css-loader',
-								{
-									loader: 'postcss-loader',
-									options: {
-										postcssOptions: {
-											plugins: [
-												autoprefixer
-											]
-										}
-									}
-								},
-								'sass-loader',
-							],
-						},
-						{
-							test: /\.svg$/i,
-							type: 'asset/source'
-						},
-						{
-							test: /\.tsx?$/i,
-							use: [
-								'babel-loader',
-								'ts-loader'
-							],
-							exclude: /node_modules/,
-						}
-					]
-				},
-				plugins: [
-					new HtmlWebpackPlugin({
-						title: 'Webpack Experiments',
-						filename: HTML_FILENAME,
-						template: cframeTemplatePath,
-						inject: false
-					}),
-					new Webpack.ProvidePlugin({
-						...cframeProvidePlugin
-					})
-				],
-				mode,
-				resolve: {
-					alias: {
-						cframe: cframeAliasPath
-					},
-					extensions: [
-						'.ts',
-						'.tsx',
-						'.js',
-						'.jsx'
-					]
-				},
-				target: [
-					'web',
-					'es5'
-				],
-				devServer: {
-					port: 9000
-				}
-			};
+			return prepareCframeTemplate(Path.resolve('./tmp'), { head, body, footer }).then((cframeTemplatePath) => {
+				return { cframeAlias, cframeProvidePlugins, cframeTemplatePath };
+			});
 		});
+	}).then(({ cframeAlias, cframeProvidePlugins, cframeTemplatePath }) => {
+		return {
+			entry: './src/main.tsx',
+			output: {
+				path: publicPath
+					? Path.resolve('./dist', publicPath)
+					: Path.resolve('./dist'),
+				filename: 'main.[hash].js',
+				publicPath: publicPath
+					? served
+						? publicPath
+						: Path.join('/dist/', publicPath)
+					: 'auto'
+			},
+			module: {
+				rules: [
+					{
+						test: /\.css$/i,
+						use: [
+							'style-loader',
+							'css-loader'
+						],
+					},
+					{
+						test: /\.jsx?$/,
+						use: 'babel-loader',
+						exclude: /node_modules/
+					},
+					{
+						test: /\.png$/i,
+						type: 'asset/resource'
+					},
+					{
+						test: /\.s[ac]ss$/i,
+						use: [
+							'style-loader',
+							'css-loader',
+							{
+								loader: 'postcss-loader',
+								options: {
+									postcssOptions: {
+										plugins: [
+											autoprefixer
+										]
+									}
+								}
+							},
+							'sass-loader',
+						],
+					},
+					{
+						test: /\.svg$/i,
+						type: 'asset/source'
+					},
+					{
+						test: /\.tsx?$/i,
+						use: [
+							'babel-loader',
+							'ts-loader'
+						],
+						exclude: /node_modules/,
+					}
+				]
+			},
+			plugins: [
+				new HtmlWebpackPlugin({
+					title: htmlTitle,
+					filename: htmlFileName,
+					template: cframeTemplatePath,
+					inject: false
+				}),
+				new Webpack.ProvidePlugin({
+					...cframeProvidePlugins
+				})
+			],
+			mode,
+			resolve: {
+				alias: {
+					cframe: Path.resolve(cframePath, cframeAlias) // TODO: Customize
+				},
+				extensions: [
+					'.ts',
+					'.tsx',
+					'.js',
+					'.jsx'
+				]
+			},
+			target: [
+				'web',
+				'es5'
+			],
+			devServer: {
+				open: true,
+				port: 9000
+			}
+		};
 	});
 }

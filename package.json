@@ -5,9 +5,16 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --config webpack.config.mjs --mode development --env local=yes env=dev test",
-    "build:prod": "webpack --config webpack.config.mjs --mode production --env local=yes env=prod",
-    "serve": "webpack serve --config webpack.config.mjs --mode development"
+    "clean": "rm -r dist && rm -r tmp",
+    "build": "webpack --config webpack.config.mjs --mode development",
+    "build:served": "webpack --config webpack.config.mjs --mode development --env served",
+    "build:qa": "webpack --config webpack.config.mjs --mode production --env env=qa",
+    "build:qa:served": "webpack --config webpack.config.mjs --mode production --env env=qa served",
+    "build:prod": "webpack --config webpack.config.mjs --mode production --env env=prod",
+    "build:prod:served": "webpack --config webpack.config.mjs --mode production --env env=prod served",
+    "serve": "webpack serve --config webpack.config.mjs --mode development",
+    "serve:qa": "webpack serve --config webpack.config.mjs --mode development --env env=qa",
+    "serve:prod": "webpack serve --config webpack.config.mjs --mode development --env env=prod"
   },
   "keywords": [],
   "author": "",

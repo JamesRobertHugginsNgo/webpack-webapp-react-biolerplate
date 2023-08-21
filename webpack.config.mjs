@@ -2,7 +2,9 @@ import Fs from 'node:fs/promises';
 import Path from 'node:path';
 
 import autoprefixer from 'autoprefixer';
+import CssMinimizerWebpackPlugin from 'css-minimizer-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import Webpack from 'webpack';
 
 export default function (envArg, argv) {
@@ -45,7 +47,7 @@ export default function (envArg, argv) {
 				path: publicPath
 					? Path.resolve('./dist', publicPath)
 					: Path.resolve('./dist'),
-				filename: 'main.[hash].js',
+				filename: 'main.[fullhash].js',
 				publicPath: publicPath
 					? served
 						? publicPath
@@ -57,7 +59,7 @@ export default function (envArg, argv) {
 					{
 						test: /\.css$/i,
 						use: [
-							'style-loader',
+							isProd ? MiniCssExtractPlugin.loader : 'style-loader',
 							'css-loader'
 						],
 					},
@@ -73,7 +75,7 @@ export default function (envArg, argv) {
 					{
 						test: /\.s[ac]ss$/i,
 						use: [
-							'style-loader',
+							isProd ? MiniCssExtractPlugin.loader : 'style-loader',
 							'css-loader',
 							{
 								loader: 'postcss-loader',
@@ -102,6 +104,11 @@ export default function (envArg, argv) {
 					}
 				]
 			},
+			optimization: {
+				minimizer: [
+					new CssMinimizerWebpackPlugin()
+				]
+			},
 			plugins: [
 				new HtmlWebpackPlugin({
 					title: htmlTitle,
@@ -109,14 +116,17 @@ export default function (envArg, argv) {
 					template: cframeTemplatePath,
 					inject: false
 				}),
+				isProd ? new MiniCssExtractPlugin({
+					filename: 'main[fullhash].css',
+				}) : false,
 				new Webpack.ProvidePlugin({
 					...cframeProvidePlugins
 				})
-			],
+			].filter(Boolean),
 			mode,
 			resolve: {
 				alias: {
-					cframe: Path.resolve(cframePath, cframeAlias) // TODO: Customize
+					cframe: Path.resolve(cframePath, cframeAlias)
 				},
 				extensions: [
 					'.ts',

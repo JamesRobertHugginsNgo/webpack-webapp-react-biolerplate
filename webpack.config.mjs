@@ -97,7 +97,7 @@ export default function (envArg, argv) {
 					exclude: /node_modules/
 				},
 				{
-					test: /\.png$/i,
+					test: /\.(gif|jpeg|jpg|png)$/i,
 					type: 'asset/resource'
 				},
 				{

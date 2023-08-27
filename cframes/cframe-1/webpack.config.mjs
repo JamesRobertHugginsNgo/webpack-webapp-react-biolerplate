@@ -15,12 +15,15 @@ export default function (env) {
 
 	return Fs.readFile(Path.join(cframePath, './src/template.ejs'), { encoding: 'utf-8' }).then((cframeContent) => {
 		return Fs.readFile(cframeContentPath, { encoding: 'utf-8' }).then((content) => {
+			console.log('CONTENT', content);
 			const headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
-			cframeContent.replace('<!-- HEAD -->', headMatch ? headMatch[1] : '');
 			const bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
-			cframeContent.replace('<!-- BODY -->', bodyMatch ? bodyMatch[1] : '');
 			const footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
-			cframeContent.replace('<!-- FOOTER -->', footerMatch ? footerMatch[1] : '');
+
+			cframeContent = cframeContent
+				.replace('<!-- HEAD -->', headMatch ? headMatch[1] : '')
+				.replace('<!-- BODY -->', bodyMatch ? bodyMatch[1] : '')
+				.replace('<!-- FOOTER -->', footerMatch ? footerMatch[1] : '');
 
 			return Fs.mkdir('./tmp/assets', { recursive: true }).then(() => {
 				return Promise.all([
@@ -34,7 +37,7 @@ export default function (env) {
 					}, (error) => {
 						console.error(error);
 					}),
-					Fs.writeFile('./tmp/template.ejs', content, { encoding: 'utf-8' })
+					Fs.writeFile('./tmp/template.ejs', cframeContent, { encoding: 'utf-8' })
 				]);
 			});
 		});

@@ -5,18 +5,6 @@ import CssMinimizerWebpackPlugin from 'css-minimizer-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import WebpackMerge from 'webpack-merge';
 
-function setDefaults(target, ...sources) {
-	const length = sources.length;
-	for (let index = 0; index < length; index++) {
-		const source = sources[index];
-		for (const key in source) {
-			if (target[key] !== undefined || source[key] == null) continue;
-			target[key] = source[key];
-		}
-	}
-	return target;
-}
-
 function merge(env, argv, ...webpackConfigs) {
 	function mergeFunction(func) {
 		return mergeValue(func(env, argv));
@@ -53,19 +41,28 @@ export default function (envArg, argv) {
 		env,
 		public_path: publicPath,
 		served
-	} = setDefaults(envArg, {
-		cframe_content_path: './src/app.ejs',
-		cframe_path: './cframes/cframe-1', // TODO: Customize default value
-		env: 'dev', // 'dev', 'qa', 'prod'
-		html_file_name: 'index.html', // TODO: Customize default value
-		html_title: 'Webpack Experiments', // TODO: Customize default value
-		public_path: null, // TODO: Customize default value
-		served: envArg.WEBPACK_SERVE || false
-	});
+	} = (({
+		WEBPACK_SERVE,
+		cframe_content_path = './src/app.ejs',
+		cframe_path = './cframes/cframe-1', // TODO: Customize default value
+		env = 'dev', // 'dev', 'qa', 'prod'
+		html_file_name = 'index.html', // TODO: Customize default value
+		html_title = 'Webpack Experiments', // TODO: Customize default value
+		public_path = null, // TODO: Customize default value
+		served = WEBPACK_SERVE || false
+	}) => Object.assign(envArg, {
+		cframe_content_path,
+		cframe_path,
+		env,
+		html_file_name,
+		html_title,
+		public_path,
+		served
+	}))(envArg);
 
-	const { mode } = setDefaults(argv, {
-		mode: env === 'dev' ? 'development' : 'production'
-	});
+	const { mode } = (({
+		mode = env === 'dev' ? 'development' : 'production'
+	}) => Object.assign(argv, { mode }))(argv);
 
 	const isProd = mode === 'production';
 

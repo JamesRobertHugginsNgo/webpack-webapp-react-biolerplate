@@ -1,148 +1,163 @@
-import Fs from 'node:fs/promises';
 import Path from 'node:path';
 
 import autoprefixer from 'autoprefixer';
 import CssMinimizerWebpackPlugin from 'css-minimizer-webpack-plugin';
-import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
-import Webpack from 'webpack';
+import WebpackMerge from 'webpack-merge';
+
+function setDefaults(target, ...sources) {
+	const length = sources.length;
+	for (let index = 0; index < length; index++) {
+		const source = sources[index];
+		for (const key in source) {
+			if (target[key] !== undefined || source[key] == null) continue;
+			target[key] = source[key];
+		}
+	}
+	return target;
+}
+
+function merge(env, argv, ...webpackConfigs) {
+	function mergeFunction(func) {
+		return mergeValue(func(env, argv));
+	}
+	function mergePromise(promise) {
+		return promise.then(mergeValue);
+	}
+	function mergeValue(value) {
+		if (value) {
+			if (typeof value === 'function') return mergeFunction(value);
+			if (value instanceof Promise) return mergePromise(value);
+			if (typeof value === 'object' && value.default) return mergeValue(value.default);
+			if (typeof value === 'string') return mergeValue(import(value));
+		}
+		return value;
+	}
+
+	if (Array.isArray(webpackConfigs[0])) {
+		webpackConfigs = webpackConfigs[0];
+	}
+	const length = webpackConfigs.length;
+	for (let index = 0; index < length; index++) {
+		webpackConfigs[index] = mergeValue(webpackConfigs[index]);
+	}
+	return webpackConfigs.every((webpackConfig) => !(webpackConfig instanceof Promise))
+		? WebpackMerge.merge(...webpackConfigs)
+		: Promise.all(webpackConfigs)
+			.then((...webpackConfigs) => WebpackMerge.merge(...webpackConfigs));
+}
 
 export default function (envArg, argv) {
 	const {
-		WEBPACK_SERVE,
-		cframePath = './cframes/cframe-1', // TODO: Customize
-		env = 'dev', // 'dev', 'qa', 'prod'
-		html_file_name: htmlFileName = 'index.html', // TODO: Customize
-		html_title: htmlTitle = 'Webpack Experiments', // TODO: Customize
-		public_path: publicPath, // TODO: Customize
-		served = WEBPACK_SERVE || false
-	} = envArg;
-	const {
-		mode = env === 'dev' ? 'development' : 'production', // 'development', 'production'
-	} = argv;
+		cframe_path: cframePath,
+		env,
+		public_path: publicPath,
+		served
+	} = setDefaults(envArg, {
+		cframe_content_path: './src/app.ejs',
+		cframe_path: './cframes/cframe-1', // TODO: Customize default value
+		env: 'dev', // 'dev', 'qa', 'prod'
+		html_file_name: 'index.html', // TODO: Customize default value
+		html_title: 'Webpack Experiments', // TODO: Customize default value
+		public_path: null, // TODO: Customize default value
+		served: envArg.WEBPACK_SERVE || false
+	});
+
+	const { mode } = setDefaults(argv, {
+		mode: env === 'dev' ? 'development' : 'production'
+	});
 
 	const isProd = mode === 'production';
 
-	return Fs.readFile('./src/app.ejs', { encoding: 'utf-8' }).then((content) => {
-		const headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
-		const head = headMatch ? headMatch[1] : '';
-		const bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
-		const body = bodyMatch ? bodyMatch[1] : '';
-		const footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);
-		const footer = footerMatch ? footerMatch[1] : '';
-
-		return import(Path.resolve(Path.join(cframePath, 'webpack-helper.mjs'))).then(({
-			alias: cframeAlias,
-			prepareTemplate: prepareCframeTemplate,
-			providePlugins: cframeProvidePlugins
-		}) => {
-			return prepareCframeTemplate(Path.resolve('./tmp'), { head, body, footer }).then((cframeTemplatePath) => {
-				return { cframeAlias, cframeProvidePlugins, cframeTemplatePath };
-			});
-		});
-	}).then(({ cframeAlias, cframeProvidePlugins, cframeTemplatePath }) => {
-		return {
-			entry: './src/main.tsx',
-			output: {
-				path: publicPath
-					? Path.resolve('./dist', publicPath)
-					: Path.resolve('./dist'),
-				filename: 'main.[fullhash].js',
-				publicPath: publicPath
-					? served
-						? publicPath
-						: Path.join('/dist/', publicPath)
-					: 'auto'
-			},
-			module: {
-				rules: [
-					{
-						test: /\.css$/i,
-						use: [
-							isProd ? MiniCssExtractPlugin.loader : 'style-loader',
-							'css-loader'
-						],
-					},
-					{
-						test: /\.jsx?$/,
-						use: 'babel-loader',
-						exclude: /node_modules/
-					},
-					{
-						test: /\.png$/i,
-						type: 'asset/resource'
-					},
-					{
-						test: /\.s[ac]ss$/i,
-						use: [
-							isProd ? MiniCssExtractPlugin.loader : 'style-loader',
-							'css-loader',
-							{
-								loader: 'postcss-loader',
-								options: {
-									postcssOptions: {
-										plugins: [
-											autoprefixer
-										]
-									}
-								}
-							},
-							'sass-loader',
-						],
-					},
-					{
-						test: /\.svg$/i,
-						type: 'asset/source'
-					},
-					{
-						test: /\.tsx?$/i,
-						use: [
-							'babel-loader',
-							'ts-loader'
-						],
-						exclude: /node_modules/,
-					}
-				]
-			},
-			optimization: {
-				minimizer: [
-					new CssMinimizerWebpackPlugin()
-				]
-			},
-			plugins: [
-				new HtmlWebpackPlugin({
-					title: htmlTitle,
-					filename: htmlFileName,
-					template: cframeTemplatePath,
-					inject: false
-				}),
-				isProd ? new MiniCssExtractPlugin({
-					filename: 'main[fullhash].css',
-				}) : false,
-				new Webpack.ProvidePlugin({
-					...cframeProvidePlugins
-				})
-			].filter(Boolean),
-			mode,
-			resolve: {
-				alias: {
-					cframe: Path.resolve(cframePath, cframeAlias)
+	return merge(envArg, argv, Path.resolve(Path.join(cframePath, 'webpack.config.mjs')), {
+		entry: './src/main.tsx',
+		output: {
+			path: publicPath
+				? Path.resolve('./dist', publicPath)
+				: Path.resolve('./dist'),
+			filename: 'main.[fullhash].js',
+			publicPath: publicPath
+				? served
+					? publicPath
+					: Path.join('/dist/', publicPath)
+				: 'auto'
+		},
+		module: {
+			rules: [
+				{
+					test: /\.css$/i,
+					use: [
+						isProd ? MiniCssExtractPlugin.loader : 'style-loader',
+						'css-loader'
+					],
 				},
-				extensions: [
-					'.ts',
-					'.tsx',
-					'.js',
-					'.jsx'
-				]
-			},
-			target: [
-				'web',
-				'es5'
-			],
-			devServer: {
-				open: true,
-				port: 9000
-			}
-		};
+				{
+					test: /\.jsx?$/,
+					use: 'babel-loader',
+					exclude: /node_modules/
+				},
+				{
+					test: /\.(gif|jpeg|jpg|png)$/i,
+					type: 'asset/resource'
+				},
+				{
+					test: /\.s[ac]ss$/i,
+					use: [
+						isProd ? MiniCssExtractPlugin.loader : 'style-loader',
+						'css-loader',
+						{
+							loader: 'postcss-loader',
+							options: {
+								postcssOptions: {
+									plugins: [
+										autoprefixer
+									]
+								}
+							}
+						},
+						'sass-loader',
+					],
+				},
+				{
+					test: /\.svg$/i,
+					type: 'asset/source'
+				},
+				{
+					test: /\.tsx?$/i,
+					use: [
+						'babel-loader',
+						'ts-loader'
+					],
+					exclude: /node_modules/,
+				}
+			]
+		},
+		optimization: {
+			minimizer: [
+				new CssMinimizerWebpackPlugin()
+			]
+		},
+		plugins: [
+			isProd ? new MiniCssExtractPlugin({
+				filename: 'main[fullhash].css',
+			}) : false
+		].filter(Boolean),
+		mode,
+		resolve: {
+			extensions: [
+				'.ts',
+				'.tsx',
+				'.js',
+				'.jsx'
+			]
+		},
+		target: [
+			'web',
+			'es5'
+		],
+		devServer: {
+			open: true,
+			port: 9000
+		}
 	});
 }

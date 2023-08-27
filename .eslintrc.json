@@ -9,8 +9,19 @@
         "plugin:react/recommended",
         "plugin:@typescript-eslint/recommended"
     ],
-		"ignorePatterns": "dist/**/*.js",
+    "ignorePatterns": "dist/**/*.js",
     "overrides": [
+        {
+            "files": [
+                "src/**/*.js",
+                "src/**/*.jsx",
+                "src/**/*.ts",
+                "src/**/*.tsx"
+            ],
+            "rules": {
+                "no-console": "warn"
+            }
+        }
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
@@ -22,6 +33,6 @@
         "@typescript-eslint"
     ],
     "rules": {
-			"semi": "warn"
+        "semi": "warn"
     }
 }

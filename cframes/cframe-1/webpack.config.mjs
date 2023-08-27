@@ -15,7 +15,6 @@ export default function (env) {
 
 	return Fs.readFile(Path.join(cframePath, './src/template.ejs'), { encoding: 'utf-8' }).then((cframeContent) => {
 		return Fs.readFile(cframeContentPath, { encoding: 'utf-8' }).then((content) => {
-			console.log('CONTENT', content);
 			const headMatch = content.match(/<!-- HEAD -->(.*?)<!-- HEAD END -->/s);
 			const bodyMatch = content.match(/<!-- BODY -->(.*?)<!-- BODY END -->/s);
 			const footerMatch = content.match(/<!-- FOOTER -->(.*?)<!-- FOOTER END -->/s);

@@ -6,6 +6,7 @@
     },
     "extends": [
         "eslint:recommended",
+        "plugin:ft-flow/recommended",
         "plugin:react/recommended"
     ],
     "ignorePatterns": "dist/**/*.js",
@@ -35,13 +36,16 @@
             ]
         }
     ],
+    "parser": "hermes-eslint",
     "parserOptions": {
         "ecmaVersion": "latest",
         "sourceType": "module"
     },
     "plugins": [
+        "ft-flow",
         "react"
     ],
+    "root": true,
     "rules": {
         "semi": "warn"
     }

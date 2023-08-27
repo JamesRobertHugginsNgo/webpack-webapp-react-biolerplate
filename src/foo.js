@@ -1,3 +1,5 @@
-export default function(bar) {
-	console.log(bar);
+// @flow
+
+export default function foo(bar: string): void {
+  console.log(bar);
 }

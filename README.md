@@ -1,6 +1,6 @@
 # Webpack Webapp React Boilerplate
 
-This contains tested [boilerplate codes](https://en.wikipedia.org/wiki/Boilerplate_code#:~:text=In%20computer%20programming%2C%20boilerplate%20code,to%20accomplish%20only%20minor%20functionality.) for creating a web application projects that uses [ReactJS](https://react.dev), [jQuery](https://jquery.com) and [Bootstrap](https://react.dev) libraries, and tested using [Jest](https://jestjs.io).
+This contains tested [boilerplate codes](https://en.wikipedia.org/wiki/Boilerplate_code#:~:text=In%20computer%20programming%2C%20boilerplate%20code,to%20accomplish%20only%20minor%20functionality.) for creating a web application projects that uses [ReactJS](https://react.dev), [jQuery](https://jquery.com) and [Bootstrap](https://react.dev) libraries.
 
 ## Features
 
@@ -52,10 +52,6 @@ Sass files must have a .sass or .scss file extension to be transpiled.
 This includes [React](https://react.dev) JavaScript library for building user interfaces and allows the use of JSX elements on JavaScript code.
 
 JSX elements can only be used on JavaScript codes with a .jsx file extension and on Typescript codes with a .tsx file extension.
-
-## Jest
-
-TODO: Add content
 
 ## Optional Front End Libraries
 
